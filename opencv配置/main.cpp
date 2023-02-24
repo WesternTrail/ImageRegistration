@@ -258,70 +258,7 @@ int main(int argc, char* argv[])
     //Mat imageTransform1_3;
     //warpPerspective(image01, imageTransform1_3, homo, Size(MAX(corners.right_top.x, corners.right_bottom.x), image02.rows));
     //imshow("homo * 0.5", imageTransform1_3);
-
-
-
-    //创建拼接后的图,需提前计算图的大小
-    int dst_width = imageTransform1.cols;  //取最右点的长度为拼接图的长度
-    int dst_height = image02.rows;
-
-
-    Mat dst(dst_height, dst_width, CV_8UC3);
-    dst.setTo(0);//图像初始化为每个像素是0
-    //将两幅图像复制进同一目标图像
-    imageTransform1.copyTo(dst(Rect(0, 0, imageTransform1.cols, imageTransform1.rows)));
-    imshow("b_dst0", dst);
-    image02.copyTo(dst(Rect(0, 0, image02.cols, image02.rows)));
-    cv::namedWindow("b_dst", WINDOW_NORMAL);
-    imshow("b_dst", dst);
-    imwrite("data/dst0.jpg", dst);
-    //接缝优化
-    OptimizeSeam(image02, imageTransform1, dst);
-    imshow("dst", dst);
-    imwrite("data/dst.jpg", dst);
-    waitKey();
-
     return 0;
-}
-
-
-//优化两图的连接处，使得拼接自然
-void OptimizeSeam(Mat& img1, Mat& trans, Mat& dst)
-{
-    int start = MIN(corners.left_top.x, corners.left_bottom.x);//开始位置，即重叠区域的左边界  
-    //忽略小于0的部分
-    if (start < 0)
-    {
-        start = 0;
-    }
-    double processWidth = img1.cols - start;//重叠区域的宽度  
-    int rows = dst.rows;
-    int cols = img1.cols; //注意，是列数*通道数
-    double alpha = 1;//img1中像素的权重  
-    for (int i = 0; i < rows; i++)
-    {
-        uchar* p = img1.ptr<uchar>(i);  //获取第i行的首地址
-        uchar* t = trans.ptr<uchar>(i);
-        uchar* d = dst.ptr<uchar>(i);
-        for (int j = start; j < cols; j++)
-        {
-            //如果遇到图像trans中无像素的黑点，则完全拷贝img1中的数据
-            if (t[j * 3] == 0 && t[j * 3 + 1] == 0 && t[j * 3 + 2] == 0)
-            {
-                alpha = 1;
-            }
-            else
-            {
-                //img1中像素的权重，与当前处理点距重叠区域左边界的距离成正比，实验证明，这种方法确实好  
-                alpha = (processWidth - (j - start)) / processWidth;
-            }
-
-            d[j * 3] = p[j * 3] * alpha + t[j * 3] * (1 - alpha);
-            d[j * 3 + 1] = p[j * 3 + 1] * alpha + t[j * 3 + 1] * (1 - alpha);
-            d[j * 3 + 2] = p[j * 3 + 2] * alpha + t[j * 3 + 2] * (1 - alpha);
-
-        }
-    }
 }
 
 
